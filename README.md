@@ -1,2 +1,2 @@
 # the-greeter
-Robot greets person that claps
+This program greets a person after clapping.
