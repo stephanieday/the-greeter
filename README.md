@@ -1,2 +1,2 @@
 # the-greeter
-This program makes a nao robot greet a person after clapping.
+With this program, a NAO robot is programmed to greet a person after clapping or making some other loud sound.
