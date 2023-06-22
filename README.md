@@ -1,2 +1,2 @@
 # the-greeter
-This program greets a person after clapping.
+This program makes a nao robot greet a person after clapping.
