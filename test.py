@@ -4,12 +4,7 @@
 #motion.moveInit()
 #motion.moveTo(0.5, 0, 0)
 
-
-
 # -*- encoding: UTF-8 -*-
-""" Say 'hello, you' each time a human face is detected
-
-"""
 
 import sys
 import time
@@ -20,8 +15,10 @@ from naoqi import ALModule
 
 from optparse import OptionParser
 
-NAO_IP = "10.0.7.113"
+from PIL import Image
 
+NAO_IP = "10.0.7.113"
+NAO_PORT = 9559
 
 # Global variable to store the HumanGreeter module instance
 HumanGreeter = None
@@ -47,14 +44,18 @@ class HumanGreeterModule(ALModule):
         memory = ALProxy("ALMemory")
         memory.subscribeToEvent("FaceDetected",
             "HumanGreeter",
-            "onFaceDetected")
-        #motion = ALProxy("ALMotion")
-        #motion.setStiffnesses("Body", 1.0)
-        #motion.moveInit()
-        #while not self.fd:
+            # "onFaceDetected",
+            "takePicture")
+
+        global camProxy
+        camProxy = ALProxy("ALVideoDevice", NAO_IP, NAO_PORT)
+        # motion = ALProxy("ALMotion")
+        # motion.setStiffnesses("Body", 1.0)
+        # motion.moveInit()
+        # while not self.fd:
         #    time.sleep(5)
-        #motion.moveTo(0, 0, ((2*3.141)/360)*45)
-        
+        # motion.moveTo(1, 0, 0) #((2*3.141)/360)*45)
+
 
     def onFaceDetected(self, *_args):
         """ This will be called each time a face is
@@ -67,13 +68,53 @@ class HumanGreeterModule(ALModule):
         memory.unsubscribeToEvent("FaceDetected",
             "HumanGreeter")
 
-        self.tts.say("Hello, i detected a face" if self.fd else "Hello i did not detect a face")
+        self.tts.say("Hello") #, i detected a face" if self.fd else "Hello i did not detect a face")
 
-            
         # Subscribe again to the event
-        memory.subscribeToEvent("FaceDetected",
-            "HumanGreeter",
-            "onFaceDetected")
+        # memory.subscribeToEvent("FaceDetected",
+        #     "HumanGreeter",
+        #     "onFaceDetected")
+
+    def takePicture(self, *_args):
+        memory.unsubscribeToEvent("FaceDetected", "HumanGreeter")
+        self.tts.say("Hello, i detected a face")
+
+        resolution = 2    # VGA
+        colorSpace = 11   # RGB
+
+        videoClient = camProxy.subscribe("python_client", resolution, colorSpace, 5)
+
+        t0 = time.time()
+
+        # Get a camera image.
+        # image[6] contains the image data passed as an array of ASCII chars.
+        naoImage = camProxy.getImageRemote(videoClient)
+
+        t1 = time.time()
+
+        # Time the image transfer.
+        print("acquisition delay ", t1 - t0)
+
+        camProxy.unsubscribe(videoClient)
+
+        ## Now we work with the image returned and save it as a PNG  using ImageDraw
+        # package.
+
+        # Get the image size and pixel array.
+        imageWidth = naoImage[0]
+        imageHeight = naoImage[1]
+        print(imageHeight)
+        array = naoImage[6]
+        print(array)
+
+        # Create a PIL Image from our pixel array.
+        im = Image.frombytes("RGB", (imageWidth, imageHeight), array)
+
+        # Save the image.
+        im.save("images/camImage"+str(imageWidth+imageHeight)+".png", "PNG")
+
+        im.show()
+
 
 def main():
     """ Main entry point
@@ -89,7 +130,7 @@ def main():
         type="int")
     parser.set_defaults(
         pip=NAO_IP,
-        pport=9559)
+        pport=NAO_PORT)
 
     (opts, args_) = parser.parse_args()
     pip   = opts.pip
@@ -115,8 +156,8 @@ def main():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print
-        print "Interrupted by user, shutting down"
+        print()
+        print("Interrupted by user, shutting down")
         myBroker.shutdown()
         sys.exit(0)
 

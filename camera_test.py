@@ -9,13 +9,13 @@ import vision_definitions
 import time
 import json
 
-IP = "10.0.7.100"  # Replace here with your NAOqi's IP address.
+IP = "10.0.7.113"  # Replace here with your NAOqi's IP address.
 PORT = 9559
 
 ####
 # Create proxy on ALVideoDevice
 
-print "Creating ALVideoDevice proxy to ", IP
+print("Creating ALVideoDevice proxy to ", IP)
 
 camProxy = ALProxy("ALVideoDevice", IP, PORT)
 
@@ -29,13 +29,13 @@ fps = 2
 nameId = camProxy.subscribe("python_GVM", resolution, colorSpace, fps)
 
 naoImages = []
-print 'getting images in remote'
+print('getting images in remote')
 for i in range(0, fps):
-  print "getting image " + str(i)
+  print("getting image " + str(i))
   naoImages.append(camProxy.getImageRemote(nameId))
-  print "With data:"
+  print("With data:")
   for ii in range(0,5):
-    print naoImages[i][ii]
+    print(naoImages[i][ii])
   # Save the image.
   time.sleep(0.05)
 
