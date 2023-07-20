@@ -33,19 +33,16 @@ class HumanGreeterModule(ALModule):
     def __init__(self, name):
         self.fd = False
         ALModule.__init__(self, name)
-        # No need for IP and port here because
-        # we have our Python broker connected to NAOqi broker
-
         # Create a proxy to ALTextToSpeech for later use
         self.tts = ALProxy("ALTextToSpeech")
 
         # Subscribe to the FaceDetected event:
         global memory
         memory = ALProxy("ALMemory")
-        memory.subscribeToEvent("FaceDetected",
-            "HumanGreeter",
-            # "onFaceDetected",
-            "takePicture")
+        global sound
+        memory.subscribeToEvent("SoundDetected", "HumanGreeter", "onSoundDetected")
+        global face
+        memory.subscribeToEvent("FaceDetected", "HumanGreeter", "onFaceDetected")
 
         global camProxy
         camProxy = ALProxy("ALVideoDevice", NAO_IP, NAO_PORT)
@@ -56,6 +53,8 @@ class HumanGreeterModule(ALModule):
         #    time.sleep(5)
         # motion.moveTo(1, 0, 0) #((2*3.141)/360)*45)
 
+    def onOnSoundDetected(self):
+        sound = True
 
     def onFaceDetected(self, *_args):
         """ This will be called each time a face is
@@ -83,7 +82,7 @@ class HumanGreeterModule(ALModule):
         colorSpace = 11   # RGB
 
         videoClient = camProxy.subscribe("python_client", resolution, colorSpace, 5)
-        
+
         for i in range(0,5):
             t0 = time.time()
 
@@ -162,8 +161,6 @@ def main():
         print("Interrupted by user, shutting down")
         myBroker.shutdown()
         sys.exit(0)
-
-
 
 if __name__ == "__main__":
     main()
