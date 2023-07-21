@@ -8,6 +8,7 @@
 
 import sys
 import time
+import random
 
 from naoqi import ALProxy
 from naoqi import ALBroker
@@ -17,7 +18,7 @@ from optparse import OptionParser
 
 from PIL import Image
 
-NAO_IP = "10.0.7.113"
+NAO_IP = "10.0.7.13"
 NAO_PORT = 9559
 
 # Global variable to store the HumanGreeter module instance
@@ -39,10 +40,6 @@ class HumanGreeterModule(ALModule):
         # Subscribe to the FaceDetected event:
         global memory
         memory = ALProxy("ALMemory")
-        global sound
-        memory.subscribeToEvent("SoundDetected", "HumanGreeter", "onSoundDetected")
-        global face
-        memory.subscribeToEvent("FaceDetected", "HumanGreeter", "onFaceDetected")
 
         global camProxy
         camProxy = ALProxy("ALVideoDevice", NAO_IP, NAO_PORT)
@@ -53,8 +50,10 @@ class HumanGreeterModule(ALModule):
         #    time.sleep(5)
         # motion.moveTo(1, 0, 0) #((2*3.141)/360)*45)
 
-    def onOnSoundDetected(self):
+    def onOnSoundDetected(self, eventName, value, subscriberIdentifier):
         sound = True
+        print("Hello, ")
+        print(str(value))
 
     def onFaceDetected(self, *_args):
         """ This will be called each time a face is
@@ -111,7 +110,7 @@ class HumanGreeterModule(ALModule):
             im = Image.frombytes("RGB", (imageWidth, imageHeight), array)
 
             # Save the image.
-            im.save("images/camImage"+str(imageWidth+imageHeight)+str(t0)+".png", "PNG")
+            im.save("images/camImage"+str(random.randint(0, 1000))+str(t0)+".png", "PNG")
 
             im.show()
             time.sleep(5)
