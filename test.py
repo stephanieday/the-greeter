@@ -8,6 +8,7 @@
 
 import sys
 import time
+import datetime
 
 from naoqi import ALProxy
 from naoqi import ALBroker
@@ -17,7 +18,7 @@ from optparse import OptionParser
 
 from PIL import Image
 
-NAO_IP = "10.0.7.113"
+NAO_IP = "10.0.7.13"
 NAO_PORT = 9559
 
 # Global variable to store the HumanGreeter module instance
@@ -39,10 +40,10 @@ class HumanGreeterModule(ALModule):
         # Subscribe to the FaceDetected event:
         global memory
         memory = ALProxy("ALMemory")
-        global sound
-        memory.subscribeToEvent("SoundDetected", "HumanGreeter", "onSoundDetected")
+        # global sound
+        # memory.subscribeToEvent("SoundDetected", "HumanGreeter", "onSoundDetected")
         global face
-        memory.subscribeToEvent("FaceDetected", "HumanGreeter", "onFaceDetected")
+        memory.subscribeToEvent("FaceDetected", "HumanGreeter", "takePicture")
 
         global camProxy
         camProxy = ALProxy("ALVideoDevice", NAO_IP, NAO_PORT)
@@ -105,13 +106,12 @@ class HumanGreeterModule(ALModule):
             imageHeight = naoImage[1]
             print(imageHeight)
             array = naoImage[6]
-            print(array)
 
             # Create a PIL Image from our pixel array.
             im = Image.frombytes("RGB", (imageWidth, imageHeight), array)
 
             # Save the image.
-            im.save("images/camImage"+str(imageWidth+imageHeight)+str(t0)+".png", "PNG")
+            im.save("images/camImage_"+str(datetime.datetime.now())+".png", "PNG")
 
             im.show()
             time.sleep(5)

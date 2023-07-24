@@ -2,6 +2,7 @@
 
 import sys
 import time
+import datetime
 
 from naoqi import ALProxy
 from naoqi import ALBroker
@@ -10,14 +11,19 @@ from naoqi import ALModule
 from optparse import OptionParser
 from threading import Thread
 
+from PIL import Image
 
-NAO_IP = "10.0.7.113"
+
+NAO_IP = "10.0.7.13"
 NAO_PORT = 9559
 
 # Global variable to store the HumanGreeter module instance
 HumanGreeter = None
-memory = None
-
+# memory = None
+personDetectionData = None
+motion = None
+posture = None
+cam = None
 
 class HumanGreeterModule(ALModule):
     """ A simple module able to react
@@ -28,50 +34,101 @@ class HumanGreeterModule(ALModule):
         self.fd = False
         ALModule.__init__(self, name)
 
-        # Create a proxy to ALTextToSpeech for later use
-        self.memory = ALProxy("ALMemory")
+        # # Create a proxy to ALTextToSpeech for later use
+        # self.memory = ALProxy("ALMemory")
 
-        #self.sonarProxy = ALProxy("ALSoundLocalizationProxy")
-        #self.sonarProxy.subscribe("soundDetected")
+        global motion
+        motion = ALProxy("ALMotion")
+        global posture
+        posture = ALProxy("ALRobotPosture")
+        global cam
+        cam = ALProxy("ALVideoDevice")
 
-    #def soundDetected(self, eventName, value, subscriberIdentifier):
-        #print(str(value))
+        motion.wakeUp()
+        posture.goToPosture("StandInit", 0.8)
 
+        motion.angleInterpolation("HeadPitch", -0.5, 1, True)
 
-    #def setSoundDetection(self):
-    #    while True:
-    #        time.sleep(0.5)
+        self.stop = False
 
     def setPersonDetection(self):
-        ...
+        time.sleep(60)
+        global personDetectionData
+        personDetectionData = True
+        print("set person detection")
 
-    def turnToOrigin(self):
-        ...
+    def turn(self):
+        time.sleep(1)
+        motion.move(0.005, 0, 0.1*3.141)
+        print("Turn around.")
+
     def walkToPerson(self):
-        ...
-    def greetPerson(self):
-        ...
+        time.sleep(1)
+        print("Walk to person.")
 
-    
+    def greetPerson(self):
+        time.sleep(1)
+        print("Greet person.")
+
+    def takePicture(self):
+        resolution = 2    # VGA
+        colorSpace = 11   # RGB
+
+        videoClient = cam.subscribe("python_client", resolution, colorSpace, 5)
+
+        t0 = time.time()
+
+        # Get a camera image.
+        # image[6] contains the image data passed as an array of ASCII chars.
+        naoImage = cam.getImageRemote(videoClient)
+
+        t1 = time.time()
+
+        # Time the image transfer.
+        print("acquisition delay ", t1 - t0)
+
+        cam.unsubscribe(videoClient)
+
+        ## Now we work with the image returned and save it as a PNG  using ImageDraw
+        # package.
+
+        # Get the image size and pixel array.
+        imageWidth = naoImage[0]
+        imageHeight = naoImage[1]
+        print(imageHeight)
+        array = naoImage[6]
+
+        # Create a PIL Image from our pixel array.
+        im = Image.frombytes("RGB", (imageWidth, imageHeight), array)
+
+        # Save the image.
+        im.save("images/camImage_"+str(datetime.datetime.now())+".png", "PNG")
+
+        print("Image is saved")
+        time.sleep(1)
+
+    def saveImg(self):
+        print("save Image")
+        while not self.stop:
+            self.takePicture()
+            time.sleep(5)
+
 
     def phasing(self):
-
-        #global soundDetecter
-        #soundDetecter = Thread(target=self.setSoundDetection)
-        #soundDetecter.start()
-        #print("Started setSoundDetection Thread")
+        global photograph
+        photograph = Thread(target=self.saveImg)
+        photograph.start()
 
         global personDetecter
         personDetecter = Thread(target=self.setPersonDetection)
         personDetecter.start()
         print("Started setPersonDetection Thread")
 
-        
         while personDetectionData is None:
-            turnThread = Thread(target=self.turnToOrigin)
+            turnThread = Thread(target=self.turn)
             turnThread.start()
             turnThread.join()
-        
+
         walkToPersonThread = Thread(target=self.walkToPerson)
         walkToPersonThread.start()
         walkToPersonThread.join()
@@ -80,7 +137,10 @@ class HumanGreeterModule(ALModule):
         greetThread.start()
         greetThread.join()
 
-        
+        motion.stopMove()
+        print("Phasing done")
+        motion.rest()
+        self.stop = True
 
 
 def main():
@@ -118,6 +178,8 @@ def main():
     # variable
     global HumanGreeter
     HumanGreeter = HumanGreeterModule("HumanGreeter")
+
+    global personDetectionData
     HumanGreeter.phasing()
 
     try:
