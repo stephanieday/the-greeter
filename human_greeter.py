@@ -14,7 +14,7 @@ from threading import Thread
 from PIL import Image
 
 
-NAO_IP = "10.0.7.13"
+NAO_IP = "nao.local" # "10.0.7.13"
 NAO_PORT = 9559
 
 # Global variable to store the HumanGreeter module instance
@@ -34,8 +34,9 @@ class HumanGreeterModule(ALModule):
         self.fd = False
         ALModule.__init__(self, name)
 
-        # # Create a proxy to ALTextToSpeech for later use
-        # self.memory = ALProxy("ALMemory")
+        # Create a proxy to ALTextToSpeech for later use
+        global tts
+        tts = ALProxy("ALTextToSpeech")
 
         global motion
         motion = ALProxy("ALMotion")
@@ -43,6 +44,10 @@ class HumanGreeterModule(ALModule):
         posture = ALProxy("ALRobotPosture")
         global cam
         cam = ALProxy("ALVideoDevice")
+
+        global memory
+        memory = ALProxy("ALMemory")
+        memory.subscribeToEvent("FaceDetected", "HumanGreeter", "setPersonDetection")
 
         motion.wakeUp()
         posture.goToPosture("StandInit", 0.8)
@@ -52,10 +57,11 @@ class HumanGreeterModule(ALModule):
         self.stop = False
 
     def setPersonDetection(self):
-        time.sleep(60)
+        memory.unsubscribeToEvent("FaceDetected", "HumanGreeter")
         global personDetectionData
         personDetectionData = True
         print("set person detection")
+        motion.stopMove()
 
     def turn(self):
         time.sleep(1)
@@ -63,11 +69,15 @@ class HumanGreeterModule(ALModule):
         print("Turn around.")
 
     def walkToPerson(self):
-        time.sleep(1)
+        motion.move(1, 0, 0)
         print("Walk to person.")
 
     def greetPerson(self):
         time.sleep(1)
+        tts.say("Hello Human. Nice to meet you. I'm Nao. \
+                    Let me take a picture of you.")
+        self.takePicture()
+        tts.say("Awesome, that looks great. See you next time.")
         print("Greet person.")
 
     def takePicture(self):
@@ -88,9 +98,6 @@ class HumanGreeterModule(ALModule):
         print("acquisition delay ", t1 - t0)
 
         cam.unsubscribe(videoClient)
-
-        ## Now we work with the image returned and save it as a PNG  using ImageDraw
-        # package.
 
         # Get the image size and pixel array.
         imageWidth = naoImage[0]
@@ -115,14 +122,14 @@ class HumanGreeterModule(ALModule):
 
 
     def phasing(self):
-        global photograph
-        photograph = Thread(target=self.saveImg)
-        photograph.start()
+        # global photograph
+        # photograph = Thread(target=self.saveImg)
+        # photograph.start()
 
-        global personDetecter
-        personDetecter = Thread(target=self.setPersonDetection)
-        personDetecter.start()
-        print("Started setPersonDetection Thread")
+        # global personDetecter
+        # personDetecter = Thread(target=self.setPersonDetection)
+        # personDetecter.start()
+        # print("Started setPersonDetection Thread")
 
         while personDetectionData is None:
             turnThread = Thread(target=self.turn)
@@ -140,7 +147,7 @@ class HumanGreeterModule(ALModule):
         motion.stopMove()
         print("Phasing done")
         motion.rest()
-        self.stop = True
+        # self.stop = True
 
 
 def main():
